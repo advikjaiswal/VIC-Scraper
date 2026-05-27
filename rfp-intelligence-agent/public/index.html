@@ -357,11 +357,146 @@
       .header-actions { justify-content: flex-start; }
     }
     @media (max-width: 620px) {
+      body { background: var(--panel); }
+      button, .button {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        min-height: 42px;
+      }
+      .app-header {
+        position: static;
+        padding: 14px 16px;
+        gap: 12px;
+      }
+      .brand h1 { font-size: 24px; }
+      .brand p { font-size: 13px; line-height: 1.35; }
+      .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+      }
+      .header-actions #scan,
+      .header-actions #exportCsv { grid-column: span 2; }
+      .sidebar {
+        padding: 16px;
+        background: var(--paper);
+      }
+      .sidebar .section-title:first-child { display: none; }
+      .stats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin: 0 0 16px;
+      }
+      .stat {
+        min-height: 64px;
+        padding: 9px;
+      }
+      .stat strong { font-size: 20px; }
+      .stat span { font-size: 11px; }
+      #actions {
+        display: grid;
+        gap: 10px;
+      }
+      .action-item {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .action-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .sidebar-footer { display: none; }
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .tab { min-width: 0; }
+      .section-title {
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
       .toolbar, .workflow { grid-template-columns: 1fr; }
+      .workflow {
+        margin-bottom: 16px;
+      }
       .workflow-step, .workflow-step:nth-child(odd) { border-right: 0; }
       .workflow-step:nth-child(2) { border-top: 1px solid var(--line); }
-      .content, .sidebar { padding-left: 16px; padding-right: 16px; }
+      .workflow-step {
+        padding: 10px 12px;
+      }
+      .workflow-step span { display: none; }
+      .content {
+        padding: 16px 14px 32px;
+      }
+      .toolbar {
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      input, select { width: 100%; }
+      .filter-strip {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        margin-bottom: 12px;
+      }
+      .filter-chip {
+        flex: 0 0 auto;
+        width: auto;
+        white-space: nowrap;
+      }
+      .panel {
+        border-radius: 8px;
+        box-shadow: none;
+      }
+      .opportunity {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 16px;
+      }
+      .opportunity h3 {
+        font-size: 20px;
+      }
+      .score {
+        width: auto;
+        height: auto;
+        border-radius: 999px;
+        padding: 7px 10px;
+        justify-self: start;
+        font-size: 15px;
+      }
+      .score::before {
+        content: 'Score ';
+        font-weight: 750;
+        margin-right: 4px;
+      }
+      .tag-list { gap: 5px; }
+      .row-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .draft {
+        padding: 16px !important;
+      }
+      .card-header {
+        display: grid;
+        gap: 8px;
+      }
+      .source-grid { grid-template-columns: 1fr; }
+      .empty { padding: 18px; }
       .access-form { align-items: stretch; flex-direction: column; }
+      .toast {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        max-width: none;
+      }
     }
   </style>
 </head>
