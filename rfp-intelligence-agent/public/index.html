@@ -273,6 +273,31 @@
       margin-bottom: 18px;
       border-radius: 0 8px 8px 0;
     }
+    .access-panel {
+      max-width: 520px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      margin-top: 22px;
+    }
+    .access-panel h3 {
+      font-family: Georgia, Cambria, serif;
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    .access-panel p {
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .access-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .access-form input { flex: 1; }
     .workflow {
       display: flex;
       gap: 0;
@@ -336,6 +361,7 @@
       .workflow-step, .workflow-step:nth-child(odd) { border-right: 0; }
       .workflow-step:nth-child(2) { border-top: 1px solid var(--line); }
       .content, .sidebar { padding-left: 16px; padding-right: 16px; }
+      .access-form { align-items: stretch; flex-direction: column; }
     }
   </style>
 </head>
@@ -348,7 +374,7 @@
     <div class="header-actions">
       <button id="scan">Scan Sources</button>
       <button class="secondary" id="refresh">Refresh</button>
-      <a class="button secondary" href="/api/export/tenders.csv">Export Tracker CSV</a>
+      <a class="button secondary" id="exportCsv" href="/api/export/tenders.csv">Export Tracker CSV</a>
     </div>
   </header>
 
@@ -428,16 +454,39 @@
   <script>
     const $ = selector => document.querySelector(selector);
     let appState = { tenders: [], action_tenders: [], actions: [], drafts: [], sources: [], stats: {} };
+    const tokenFromUrl = new URLSearchParams(window.location.search).get('token');
+    if (tokenFromUrl) {
+      localStorage.setItem('rfpAdminToken', tokenFromUrl);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    function authToken() {
+      return localStorage.getItem('rfpAdminToken') || '';
+    }
+
+    function withToken(path) {
+      const token = authToken();
+      if (!token) return path;
+      const separator = path.includes('?') ? '&' : '?';
+      return `${path}${separator}token=${encodeURIComponent(token)}`;
+    }
 
     async function api(path, options = {}) {
+      const token = authToken();
       const response = await fetch(path, {
         ...options,
-        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(options.headers || {})
+        }
       });
       if (!response.ok) {
         let message = response.statusText;
         try { message = (await response.json()).error || message; } catch (_) {}
-        throw new Error(message);
+        const error = new Error(message);
+        error.status = response.status;
+        throw error;
       }
       return response.json();
     }
@@ -505,8 +554,8 @@
           <p class="summary">${escapeHtml((draft.markdown || '').replace(/[#*_`]/g, '').slice(0, 520))}...</p>
           <div class="tag-list">${(draft.needs_human_input || []).slice(0, 4).map(item => `<span class="tag">${escapeHtml(item)}</span>`).join('')}</div>
           <div class="row-actions">
-            <a class="button" href="/api/drafts/${encodeURIComponent(draft.id)}/markdown" target="_blank" rel="noreferrer">Open Full Draft</a>
-            <a class="button secondary" href="/api/drafts/${encodeURIComponent(draft.id)}/markdown" download>Download Markdown</a>
+            <a class="button" href="${withToken(`/api/drafts/${encodeURIComponent(draft.id)}/markdown`)}" target="_blank" rel="noreferrer">Open Full Draft</a>
+            <a class="button secondary" href="${withToken(`/api/drafts/${encodeURIComponent(draft.id)}/markdown`)}" download>Download Markdown</a>
           </div>
         </article>
       `).join('') || '<div class="empty">No proposal drafts yet. Open a strong-fit opportunity and generate a proposal pack.</div>';
@@ -619,6 +668,29 @@
       window.__toastTimer = setTimeout(() => { node.style.display = 'none'; }, 3600);
     }
 
+    function renderAccessPrompt(message = '') {
+      $('#stats').innerHTML = '';
+      $('#actions').innerHTML = '<div class="empty">Sign in to load the private priority queue.</div>';
+      $('#list').innerHTML = `
+        <div class="access-panel">
+          <h3>Enter Access Token</h3>
+          <p>${escapeHtml(message || 'This private dashboard is protected. Enter the RFP_ADMIN_TOKEN configured in Render to load opportunities.')}</p>
+          <form class="access-form" id="accessForm">
+            <input id="accessToken" type="password" autocomplete="current-password" placeholder="RFP_ADMIN_TOKEN">
+            <button type="submit">Unlock Dashboard</button>
+          </form>
+        </div>
+      `;
+      $('#accessForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const token = $('#accessToken').value.trim();
+        if (!token) return;
+        localStorage.setItem('rfpAdminToken', token);
+        $('#exportCsv').href = withToken('/api/export/tenders.csv');
+        await load();
+      });
+    }
+
     async function load() {
       const params = new URLSearchParams();
       if ($('#q').value) params.set('q', $('#q').value);
@@ -633,6 +705,7 @@
       renderOpportunities(appState.tenders);
       renderDrafts(appState.drafts);
       renderSources(appState.sources);
+      $('#exportCsv').href = withToken('/api/export/tenders.csv');
     }
 
     function setView(view) {
@@ -704,7 +777,14 @@
         toast('RFP title copied for source search.');
       }
     });
-    load().catch(error => { $('#list').innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; });
+    $('#exportCsv').href = withToken('/api/export/tenders.csv');
+    load().catch(error => {
+      if (error.status === 401) {
+        renderAccessPrompt(error.message);
+        return;
+      }
+      $('#list').innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+    });
   </script>
 </body>
 </html>

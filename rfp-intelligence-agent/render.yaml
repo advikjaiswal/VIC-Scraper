@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: rfp-intelligence-agent
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: HOST
+        value: 0.0.0.0
+      - key: RFP_ADMIN_TOKEN
+        sync: false

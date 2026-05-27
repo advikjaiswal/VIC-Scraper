@@ -161,6 +161,14 @@ function serveStatic(req, res, url) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  if (req.method === 'GET' && url.pathname === '/health') {
+    send(res, 200, {
+      ok: true,
+      service: 'rfp-intelligence-agent',
+      timestamp: new Date().toISOString()
+    });
+    return;
+  }
   if (url.pathname.startsWith('/api/')) {
     api(req, res, url).catch(error => send(res, 500, { error: error.message }));
     return;
