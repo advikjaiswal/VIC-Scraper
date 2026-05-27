@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RFP Intelligence & Proposal Automation</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #111a16;
+      --muted: #657169;
+      --line: #d8ddd7;
+      --paper: #f4f2eb;
+      --panel: #fffdf8;
+      --panel-2: #ebe8dc;
+      --green: #1e654d;
+      --green-soft: #dfeae2;
+      --amber: #b67825;
+      --red: #ad4337;
+      --blue: #315f86;
+      --shadow: 0 10px 30px rgba(23, 33, 27, 0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+    }
+    h1, h2, h3, p { margin: 0; }
+    button, .button, input, select, textarea { font: inherit; }
+    button, .button {
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: white;
+      padding: 9px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 750;
+      font-size: 13px;
+      text-decoration: none;
+      min-height: 38px;
+    }
+    button.secondary, .button.secondary { background: transparent; color: var(--ink); }
+    button.ghost { border-color: var(--line); background: var(--panel); color: var(--ink); }
+    button:disabled { opacity: 0.58; cursor: wait; }
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 253, 248, 0.94);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+    }
+    .brand h1 {
+      font-family: Georgia, Cambria, serif;
+      font-size: clamp(22px, 2.4vw, 32px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    .brand p { color: var(--muted); margin-top: 6px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .layout {
+      display: grid;
+      grid-template-columns: 292px minmax(0, 1fr);
+      min-height: calc(100vh - 76px);
+    }
+    .sidebar {
+      border-right: 1px solid var(--line);
+      padding: 22px 20px;
+      background: var(--panel-2);
+    }
+    .content { padding: 24px 28px 48px; min-width: 0; }
+    .section-title {
+      font-family: Georgia, Cambria, serif;
+      font-size: 26px;
+      margin-bottom: 14px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 14px 0 20px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 78px;
+    }
+    .stat strong { display: block; font-family: Georgia, Cambria, serif; font-size: 25px; line-height: 1; }
+    .stat span, .muted, .meta { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.5);
+      color: var(--muted);
+      min-height: 36px;
+    }
+    .tab.active { background: var(--ink); color: white; border-color: var(--ink); }
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(150px, 1fr));
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+    .field span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    input, select {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 11px;
+      background: white;
+      color: var(--ink);
+      min-height: 40px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      background: rgba(255, 253, 248, 0.78);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .opportunity {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 70px 150px;
+      gap: 16px;
+      padding: 18px;
+      border-top: 1px solid var(--line);
+      align-items: start;
+    }
+    .opportunity:first-child { border-top: 0; }
+    .opportunity h3, .draft h3, .source h3 {
+      font-family: Georgia, Cambria, serif;
+      font-size: 19px;
+      line-height: 1.15;
+      margin-bottom: 6px;
+    }
+    .summary { margin: 10px 0 8px; line-height: 1.42; color: #243028; font-size: 14px; max-width: 860px; }
+    .recommendation { color: var(--muted); font-weight: 650; font-size: 14px; }
+    .score {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--green-soft);
+      color: var(--green);
+      font: 850 21px "Avenir Next", "Segoe UI", sans-serif;
+      border: 1px solid #bed4c4;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: white;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tag {
+      background: #f0efe8;
+      border: 1px solid var(--line);
+      color: #526058;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
+    .row-actions button, .row-actions .button { padding: 8px 10px; min-height: 36px; }
+    .action-item, .draft, .source {
+      border-top: 1px solid var(--line);
+      padding: 14px 0;
+    }
+    .action-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 9px;
+    }
+    .action-controls button, .action-controls .button {
+      min-height: 32px;
+      padding: 6px 9px;
+      font-size: 12px;
+    }
+    .action-item:first-child, .draft:first-child, .source:first-child { border-top: 0; }
+    .action-item strong { display: block; margin-bottom: 3px; }
+    .priority {
+      color: var(--red);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .empty {
+      padding: 28px;
+      border: 1px dashed #c7cec8;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.5);
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .source {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .source h3 { font-size: 18px; }
+    .filter-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: -4px 0 18px;
+    }
+    .filter-chip {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--muted);
+      min-height: 32px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+    .filter-chip.active {
+      background: var(--green-soft);
+      color: var(--green);
+      border-color: #bed4c4;
+    }
+    .sidebar-footer {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .notice {
+      border-left: 4px solid var(--green);
+      background: #eef4ed;
+      padding: 12px 14px;
+      color: #344139;
+      margin-bottom: 18px;
+      border-radius: 0 8px 8px 0;
+    }
+    .workflow {
+      display: flex;
+      gap: 0;
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.58);
+      overflow: hidden;
+    }
+    .workflow-step {
+      flex: 1;
+      min-width: 0;
+      padding: 11px 14px;
+      border-right: 1px solid var(--line);
+    }
+    .workflow-step:last-child { border-right: 0; }
+    .workflow-step strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 3px;
+      font-size: 14px;
+    }
+    .workflow-step span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      background: var(--ink);
+      color: white;
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      max-width: 360px;
+      display: none;
+      z-index: 20;
+    }
+    @media (max-width: 940px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+      .opportunity { grid-template-columns: 1fr; }
+      .workflow { display: grid; grid-template-columns: 1fr 1fr; }
+      .workflow-step { border-right: 0; border-top: 1px solid var(--line); }
+      .workflow-step:nth-child(-n+2) { border-top: 0; }
+      .workflow-step:nth-child(odd) { border-right: 1px solid var(--line); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .app-header { align-items: flex-start; flex-direction: column; }
+      .header-actions { justify-content: flex-start; }
+    }
+    @media (max-width: 620px) {
+      .toolbar, .workflow { grid-template-columns: 1fr; }
+      .workflow-step, .workflow-step:nth-child(odd) { border-right: 0; }
+      .workflow-step:nth-child(2) { border-top: 1px solid var(--line); }
+      .content, .sidebar { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <h1>RFP Intelligence & Proposal Automation</h1>
+      <p>Private command center for sourcing, qualifying, drafting and tracking evaluation opportunities.</p>
+    </div>
+    <div class="header-actions">
+      <button id="scan">Scan Sources</button>
+      <button class="secondary" id="refresh">Refresh</button>
+      <a class="button secondary" href="/api/export/tenders.csv">Export Tracker CSV</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2 class="section-title">Today</h2>
+      <div class="stats" id="stats"></div>
+      <h2 class="section-title" style="font-size:24px;margin-top:22px">Priority Queue</h2>
+      <div id="actions"></div>
+      <div class="sidebar-footer">Showing the five most urgent actions. Filter the pipeline by source, fit, deadline, or status for deeper review.</div>
+    </aside>
+
+    <section class="content">
+      <div class="tabs">
+        <button class="tab active" data-view="opportunities">Pipeline</button>
+        <button class="tab" data-view="drafts">Drafts</button>
+        <button class="tab" data-view="sources">Sources</button>
+      </div>
+
+      <div id="view-opportunities">
+        <div class="workflow">
+          <div class="workflow-step"><strong>1. Scan sources</strong><span>Pull live RFPs from approved portals.</span></div>
+          <div class="workflow-step"><strong>2. Verify source</strong><span>Open the original listing before acting.</span></div>
+          <div class="workflow-step"><strong>3. Prepare draft</strong><span>Create a proposal pack with placeholders.</span></div>
+          <div class="workflow-step"><strong>4. Track outcome</strong><span>Submit manually, then mark result.</span></div>
+        </div>
+        <h2 class="section-title">Opportunity Pipeline</h2>
+        <div class="toolbar">
+          <label class="field"><span>Search</span><input id="q" placeholder="Title, organization, scope"></label>
+          <label class="field"><span>Source</span><select id="sourceFilter">
+            <option value="">Every source</option>
+          </select></label>
+          <label class="field"><span>Fit</span><select id="fitFilter">
+            <option value="">Every fit level</option>
+            <option value="strong">Strong fit</option>
+            <option value="maybe">Maybe fit</option>
+            <option value="low">Low fit</option>
+          </select></label>
+          <label class="field"><span>Deadline</span><select id="deadlineFilter">
+            <option value="">Every deadline</option>
+            <option value="urgent">Due in 7 days</option>
+            <option value="missing">Missing deadline</option>
+          </select></label>
+          <label class="field"><span>Stage</span><select id="status">
+            <option value="">Every workflow stage</option>
+            <option value="new">Needs source review</option>
+            <option value="shortlisted">Shortlisted</option>
+            <option value="draft_required">Draft requested</option>
+            <option value="draft_generated">Draft generated</option>
+            <option value="under_review">Under review</option>
+            <option value="ready_to_submit">Ready to submit</option>
+            <option value="submitted">Submitted</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+          </select></label>
+        </div>
+        <div class="filter-strip" id="sourceChips"></div>
+        <div class="panel" id="list"></div>
+      </div>
+
+      <div id="view-drafts" hidden>
+        <h2 class="section-title">Proposal Drafts</h2>
+        <div class="notice">Drafts are generated with placeholders for credentials, team, budget and attachments. They are working documents, not final submissions.</div>
+        <div class="panel" id="drafts"></div>
+      </div>
+
+      <div id="view-sources" hidden>
+        <h2 class="section-title">Source Health</h2>
+        <div class="notice">Subscription and login-gated sources are intentionally limited until legitimate credentials or approved access are provided.</div>
+        <div class="source-grid" id="sources"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = selector => document.querySelector(selector);
+    let appState = { tenders: [], action_tenders: [], actions: [], drafts: [], sources: [], stats: {} };
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+      });
+      if (!response.ok) {
+        let message = response.statusText;
+        try { message = (await response.json()).error || message; } catch (_) {}
+        throw new Error(message);
+      }
+      return response.json();
+    }
+
+    function renderStats(stats) {
+      const items = [
+        ['Total RFPs', stats.total || 0],
+        ['New', stats.new_count || 0],
+        ['Shortlisted', stats.shortlisted_count || 0],
+        ['Ready', stats.ready_count || 0],
+        ['Submitted', stats.submitted_count || 0],
+        ['Best score', stats.top_score || 0]
+      ];
+      $('#stats').innerHTML = items.map(([label, value]) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
+    }
+
+    function renderOpportunities(tenders) {
+      $('#list').innerHTML = tenders.map(t => `
+        <article class="opportunity" id="tender-${escapeAttr(t.id)}">
+          <div>
+            <h3>${escapeHtml(t.title)}</h3>
+            <div class="meta">${escapeHtml(t.organization || 'Unknown organization')} · ${escapeHtml(t.source_name || 'Unknown source')} · Deadline ${escapeHtml(t.deadline || 'not detected')}</div>
+            <p class="summary">${escapeHtml(shortText(t.ai_summary || t.description_clean || 'No summary available yet.', 260))}</p>
+            <div class="recommendation">${escapeHtml(t.ai_recommendation || '')}</div>
+            <div class="row-actions">
+              ${opportunityActions(t)}
+              ${sourceButton(t)}
+            </div>
+          </div>
+          <div class="score" title="Overall fit score">${t.overall_score || 0}</div>
+          <div>
+            <span class="status">${label(t.status)}</span>
+            <div class="tag-list">${(t.keywords_matched || []).slice(0, 3).map(k => `<span class="tag">${escapeHtml(k)}</span>`).join('')}</div>
+          </div>
+        </article>
+      `).join('') || '<div class="empty">No opportunities are stored yet. Scan approved public sources to build the first live pipeline.</div>';
+    }
+
+    function renderActions(actions) {
+      const tenderById = new Map([...(appState.action_tenders || []), ...(appState.tenders || [])].map(tender => [tender.id, tender]));
+      $('#actions').innerHTML = (actions || []).slice(0, 5).map(action => `
+        <div class="action-item">
+          <div class="priority">${escapeHtml(priorityLabel(action.type))}</div>
+          <strong>${escapeHtml(action.label || '')}</strong>
+          <div class="muted">${action.due_at ? `Due ${escapeHtml(action.due_at)}` : 'No deadline detected'} · Priority ${escapeHtml(action.priority || 50)}</div>
+          <div class="action-controls">
+            <button class="ghost" data-focus="${escapeAttr(action.tender_id || '')}">Review RFP</button>
+            ${sourceButton(tenderById.get(action.tender_id), true)}
+          </div>
+        </div>
+      `).join('') || '<div class="empty">No open actions. Scan sources after configuration changes to refresh the queue.</div>';
+    }
+
+    function renderDrafts(drafts) {
+      const latest = latestDrafts(drafts || []);
+      $('#drafts').innerHTML = latest.map(draft => `
+        <article class="draft" style="padding:20px 24px">
+          <div class="card-header">
+            <div>
+              <h3>${escapeHtml(draft.title || 'Proposal draft')}</h3>
+              <div class="meta">Confidence ${escapeHtml(draft.confidence_score || 0)} · ${escapeHtml(draft.status || 'draft')} · ${escapeHtml(draft.updated_at || draft.created_at || '')}</div>
+            </div>
+            <span class="status">Human review required</span>
+          </div>
+          <p class="summary">${escapeHtml((draft.markdown || '').replace(/[#*_`]/g, '').slice(0, 520))}...</p>
+          <div class="tag-list">${(draft.needs_human_input || []).slice(0, 4).map(item => `<span class="tag">${escapeHtml(item)}</span>`).join('')}</div>
+          <div class="row-actions">
+            <a class="button" href="/api/drafts/${encodeURIComponent(draft.id)}/markdown" target="_blank" rel="noreferrer">Open Full Draft</a>
+            <a class="button secondary" href="/api/drafts/${encodeURIComponent(draft.id)}/markdown" download>Download Markdown</a>
+          </div>
+        </article>
+      `).join('') || '<div class="empty">No proposal drafts yet. Open a strong-fit opportunity and generate a proposal pack.</div>';
+    }
+
+    function renderSources(sources) {
+      $('#sources').innerHTML = (sources || []).map(source => `
+        <article class="source">
+          <h3>${escapeHtml(source.name)}</h3>
+          <div class="meta">${escapeHtml(source.type)} · ${escapeHtml(source.region || 'Global')} · ${source.enabled ? 'Enabled' : 'Paused'} · ${escapeHtml(source.tender_count || 0)} tenders</div>
+          <p class="summary">${escapeHtml(source.notes || '')}</p>
+          <div class="tag-list">${(source.categories || []).map(category => `<span class="tag">${escapeHtml(category)}</span>`).join('')}</div>
+        </article>
+      `).join('') || '<div class="empty">No sources configured.</div>';
+    }
+
+    function renderSourceFilters(sources) {
+      const select = $('#sourceFilter');
+      const current = select.value;
+      const activeSources = (sources || []).filter(source => Number(source.tender_count || 0) > 0);
+      select.innerHTML = '<option value="">Every source</option>' + activeSources
+        .map(source => `<option value="${escapeAttr(source.id)}">${escapeHtml(source.name)} (${source.tender_count})</option>`)
+        .join('');
+      select.value = activeSources.some(source => source.id === current) ? current : '';
+
+      const active = select.value;
+      $('#sourceChips').innerHTML = [
+        `<button class="filter-chip ${active ? '' : 'active'}" data-source-chip="">Every source</button>`,
+        ...activeSources.slice(0, 4).map(source =>
+          `<button class="filter-chip ${active === source.id ? 'active' : ''}" data-source-chip="${escapeAttr(source.id)}">${escapeHtml(source.name)} · ${source.tender_count}</button>`
+        )
+      ].join('');
+    }
+
+    function opportunityActions(tender) {
+      const status = tender.status || 'new';
+      if (status === 'new') {
+        return `<button data-status="shortlisted" data-id="${tender.id}">Shortlist</button><button class="secondary" data-status="rejected" data-id="${tender.id}">Not relevant</button>`;
+      }
+      if (status === 'shortlisted' || status === 'draft_required') {
+        return `<button data-draft="${tender.id}">Create Proposal Pack</button><button class="secondary" data-status="rejected" data-id="${tender.id}">Drop</button>`;
+      }
+      if (status === 'draft_generated') {
+        return `<button data-open-drafts="1">Open Draft</button><button class="secondary" data-status="under_review" data-id="${tender.id}">Send For Review</button>`;
+      }
+      if (status === 'under_review') {
+        return `<button data-status="ready_to_submit" data-id="${tender.id}">Ready To Submit</button><button class="secondary" data-status="draft_required" data-id="${tender.id}">Needs Revision</button>`;
+      }
+      if (status === 'ready_to_submit') {
+        return `<button data-status="submitted" data-id="${tender.id}">Mark Submitted</button>`;
+      }
+      if (status === 'submitted') {
+        return `<button data-status="won" data-id="${tender.id}">Won</button><button class="secondary" data-status="lost" data-id="${tender.id}">Lost</button>`;
+      }
+      return '';
+    }
+
+    function latestDrafts(drafts) {
+      const byTender = new Map();
+      for (const draft of drafts) {
+        const key = draft.tender_id || draft.title;
+        const previous = byTender.get(key);
+        if (!previous || String(draft.updated_at || draft.created_at || '') > String(previous.updated_at || previous.created_at || '')) {
+          byTender.set(key, draft);
+        }
+      }
+      return Array.from(byTender.values());
+    }
+
+    function priorityLabel(type) {
+      return {
+        deadline_risk: 'Due soon',
+        review_rfp: 'Review',
+        generate_draft: 'Draft',
+        missing_document: 'Find document',
+        manual_fit_review: 'Check fit'
+      }[type] || label(type);
+    }
+
+    function sourceButton(tender, compact = false) {
+      if (!tender) return '';
+      const url = tender.open_source_url || (/^https?:\/\//i.test(tender.detail_url || '') ? tender.detail_url : tender.source_url);
+      if (!url || !/^https?:\/\//i.test(url)) return `<button class="secondary" data-copy-title="${escapeAttr(tender.title || '')}">Copy RFP Title</button>`;
+      const labelText = tender.source_link_type === 'listing' ? 'Open Source Page' : compact ? 'Open Source' : 'Open Original RFP';
+      return `<a class="button secondary" href="${escapeAttr(url)}" target="_blank" rel="noreferrer" title="Open the original public source in a new tab">${labelText}</a>`;
+    }
+
+    function shortText(value, maxLength) {
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
+      return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+    }
+
+    function label(value) {
+      return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/"/g, '&quot;');
+    }
+
+    function toast(message) {
+      const node = $('#toast');
+      node.textContent = message;
+      node.style.display = 'block';
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => { node.style.display = 'none'; }, 3600);
+    }
+
+    async function load() {
+      const params = new URLSearchParams();
+      if ($('#q').value) params.set('q', $('#q').value);
+      if ($('#status').value) params.set('status', $('#status').value);
+      if ($('#sourceFilter').value) params.set('source_id', $('#sourceFilter').value);
+      if ($('#fitFilter').value) params.set('fit', $('#fitFilter').value);
+      if ($('#deadlineFilter').value) params.set('deadline', $('#deadlineFilter').value);
+      appState = await api(`/api/state?${params}`);
+      renderStats(appState.stats);
+      renderSourceFilters(appState.sources);
+      renderActions(appState.actions);
+      renderOpportunities(appState.tenders);
+      renderDrafts(appState.drafts);
+      renderSources(appState.sources);
+    }
+
+    function setView(view) {
+      for (const tab of document.querySelectorAll('.tab')) tab.classList.toggle('active', tab.dataset.view === view);
+      for (const name of ['opportunities', 'drafts', 'sources']) $(`#view-${name}`).hidden = name !== view;
+    }
+
+    $('#scan').addEventListener('click', async event => {
+      event.target.disabled = true;
+        event.target.textContent = 'Scanning...';
+      try {
+        const result = await api('/api/autopilot', { method: 'POST', body: '{}' });
+        toast(`Scan complete: ${result.run?.found || 0} found, ${result.actions?.length || 0} priority actions queued.`);
+        await load();
+      } finally {
+        event.target.disabled = false;
+        event.target.textContent = 'Scan Sources';
+      }
+    });
+    $('#refresh').addEventListener('click', load);
+    $('#q').addEventListener('input', () => { clearTimeout(window.__loadTimer); window.__loadTimer = setTimeout(load, 200); });
+    $('#status').addEventListener('change', load);
+    $('#sourceFilter').addEventListener('change', load);
+    $('#fitFilter').addEventListener('change', load);
+    $('#deadlineFilter').addEventListener('change', load);
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => setView(tab.dataset.view)));
+    document.addEventListener('click', async event => {
+      const status = event.target.dataset.status;
+      const id = event.target.dataset.id;
+      const draft = event.target.dataset.draft;
+      const focus = event.target.dataset.focus;
+      const copyTitle = event.target.dataset.copyTitle;
+      const sourceChip = event.target.dataset.sourceChip;
+      const openDrafts = event.target.dataset.openDrafts;
+      if (sourceChip !== undefined) {
+        $('#sourceFilter').value = sourceChip;
+        await load();
+      }
+      if (status && id) {
+        await api(`/api/tenders/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status }) });
+        toast(`Status updated to ${label(status)}.`);
+        await load();
+      }
+      if (draft) {
+        await api(`/api/tenders/${encodeURIComponent(draft)}/draft`, { method: 'POST', body: '{}' });
+        toast('Proposal pack generated. Review placeholders before submission.');
+        await load();
+        setView('drafts');
+      }
+      if (openDrafts) {
+        setView('drafts');
+      }
+      if (focus) {
+        setView('opportunities');
+        const node = document.getElementById(`tender-${focus}`);
+        if (node) {
+          node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          node.animate([{ backgroundColor: '#fff4cf' }, { backgroundColor: 'rgba(255,253,248,0.78)' }], { duration: 1400 });
+        } else {
+          const tender = (appState.tenders || []).find(item => item.id === focus);
+          if (tender) {
+            $('#q').value = tender.title;
+            await load();
+          }
+        }
+      }
+      if (copyTitle) {
+        await navigator.clipboard.writeText(copyTitle);
+        toast('RFP title copied for source search.');
+      }
+    });
+    load().catch(error => { $('#list').innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; });
+  </script>
+</body>
+</html>
