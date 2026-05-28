@@ -72,6 +72,7 @@ function createStore(dbPath) {
       );
       CREATE TABLE IF NOT EXISTS tenders (
         id TEXT PRIMARY KEY,
+        tracking_id TEXT,
         source_id TEXT,
         source_name TEXT,
         source_url TEXT,
@@ -166,6 +167,35 @@ function createStore(dbPath) {
     `);
     const actionColumns = all('PRAGMA table_info(actions)').map(column => column.name);
     if (!actionColumns.includes('priority')) run('ALTER TABLE actions ADD COLUMN priority INTEGER DEFAULT 50;');
+    const tenderColumns = all('PRAGMA table_info(tenders)').map(column => column.name);
+    if (!tenderColumns.includes('tracking_id')) run('ALTER TABLE tenders ADD COLUMN tracking_id TEXT;');
+    run('CREATE UNIQUE INDEX IF NOT EXISTS idx_tenders_tracking_id ON tenders(tracking_id);');
+    assignMissingTrackingIds();
+  }
+
+  function trackingYear(tender = {}) {
+    const candidate = tender.deadline || tender.posted_date || tender.scraped_at || new Date().toISOString();
+    const match = String(candidate).match(/\b(20\d{2})\b/);
+    return match ? match[1] : String(new Date().getFullYear());
+  }
+
+  function nextTrackingId(year) {
+    const key = `tracking_sequence_${year}`;
+    const current = get(`SELECT value FROM settings WHERE key = ${sqlQuote(key)}`);
+    const next = Number(current?.value || 0) + 1;
+    run(`
+      INSERT INTO settings (key, value)
+      VALUES (${sqlQuote(key)}, ${sqlQuote(String(next))})
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+    `);
+    return `VIC-RFP-${year}-${String(next).padStart(4, '0')}`;
+  }
+
+  function assignMissingTrackingIds() {
+    const missing = all('SELECT id, deadline, posted_date, scraped_at FROM tenders WHERE tracking_id IS NULL OR tracking_id = "" ORDER BY created_at ASC, id ASC');
+    for (const tender of missing) {
+      run(`UPDATE tenders SET tracking_id = ${sqlQuote(nextTrackingId(trackingYear(tender)))} WHERE id = ${sqlQuote(tender.id)};`);
+    }
   }
 
   function upsertSource(source) {
@@ -187,24 +217,26 @@ function createStore(dbPath) {
 
   function upsertTender(input) {
     const tender = normalizeTender(input);
-    const existing = get(`SELECT id, status FROM tenders WHERE duplicate_key = ${sqlQuote(tender.duplicate_key)}`);
+    const existing = get(`SELECT id, status, tracking_id FROM tenders WHERE duplicate_key = ${sqlQuote(tender.duplicate_key)}`);
     const id = existing?.id || tender.id;
     const status = existing?.status || tender.status;
+    const trackingId = existing?.tracking_id || tender.tracking_id || nextTrackingId(trackingYear(tender));
     run(`
       INSERT INTO tenders (
-        id, source_id, source_name, source_url, detail_url, title, organization, country, region, sector,
+        id, tracking_id, source_id, source_name, source_url, detail_url, title, organization, country, region, sector,
         opportunity_type, deadline, posted_date, scraped_at, description_raw, description_clean, documents,
         contact_email, submission_url, submission_method, budget_text, eligibility_text, keywords_matched,
         status, duplicate_key, fit_score, urgency_score, eligibility_score, proposal_effort_score, overall_score,
         ai_summary, ai_recommendation, next_action, updated_at
       ) VALUES (
-        ${sqlQuote(id)}, ${sqlQuote(tender.source_id)}, ${sqlQuote(tender.source_name)}, ${sqlQuote(tender.source_url)}, ${sqlQuote(tender.detail_url)}, ${sqlQuote(tender.title)}, ${sqlQuote(tender.organization)}, ${sqlQuote(tender.country)}, ${sqlQuote(tender.region)}, ${sqlQuote(tender.sector)},
+        ${sqlQuote(id)}, ${sqlQuote(trackingId)}, ${sqlQuote(tender.source_id)}, ${sqlQuote(tender.source_name)}, ${sqlQuote(tender.source_url)}, ${sqlQuote(tender.detail_url)}, ${sqlQuote(tender.title)}, ${sqlQuote(tender.organization)}, ${sqlQuote(tender.country)}, ${sqlQuote(tender.region)}, ${sqlQuote(tender.sector)},
         ${sqlQuote(tender.opportunity_type)}, ${sqlQuote(tender.deadline)}, ${sqlQuote(tender.posted_date)}, ${sqlQuote(tender.scraped_at)}, ${sqlQuote(tender.description_raw)}, ${sqlQuote(tender.description_clean)}, ${jsonQuote(tender.documents)},
         ${sqlQuote(tender.contact_email)}, ${sqlQuote(tender.submission_url)}, ${sqlQuote(tender.submission_method)}, ${sqlQuote(tender.budget_text)}, ${sqlQuote(tender.eligibility_text)}, ${jsonQuote(tender.keywords_matched)},
         ${sqlQuote(status)}, ${sqlQuote(tender.duplicate_key)}, ${numberValue(tender.fit_score)}, ${numberValue(tender.urgency_score)}, ${numberValue(tender.eligibility_score)}, ${numberValue(tender.proposal_effort_score)}, ${numberValue(tender.overall_score)},
         ${sqlQuote(tender.ai_summary)}, ${sqlQuote(tender.ai_recommendation)}, ${sqlQuote(tender.next_action)}, CURRENT_TIMESTAMP
       )
       ON CONFLICT(duplicate_key) DO UPDATE SET
+        tracking_id = COALESCE(tenders.tracking_id, excluded.tracking_id),
         source_name = excluded.source_name,
         source_url = excluded.source_url,
         detail_url = excluded.detail_url,
@@ -374,10 +406,14 @@ function createStore(dbPath) {
         SUM(CASE WHEN status IN ('shortlisted','draft_required') THEN 1 ELSE 0 END) AS shortlisted_count,
         SUM(CASE WHEN status = 'ready_to_submit' THEN 1 ELSE 0 END) AS ready_count,
         SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END) AS submitted_count,
+        SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END) AS won_count,
         MAX(overall_score) AS top_score
       FROM tenders
     `);
-    return row || {};
+    return {
+      ...(row || {}),
+      success_fee_inr: Number(row?.won_count || 0) * 2000
+    };
   }
 
   return {

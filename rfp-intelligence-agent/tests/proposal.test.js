@@ -6,6 +6,7 @@ test('generates template proposal pack with placeholders for missing credentials
   const draft = generateTemplateProposal({
     tender: {
       id: 't1',
+      tracking_id: 'VIC-RFP-2026-0007',
       title: 'Impact Evaluation of Education Program',
       organization: 'Example NGO',
       deadline: '2026-06-05',
@@ -18,6 +19,8 @@ test('generates template proposal pack with placeholders for missing credentials
   });
 
   assert.match(draft.markdown, /Client Research Team/);
+  assert.match(draft.markdown, /VIC-RFP-2026-0007/);
+  assert.match(draft.title, /VIC-RFP-2026-0007/);
   assert.match(draft.markdown, /\[INSERT RELEVANT PROJECT EXPERIENCE\]/);
   assert.match(draft.markdown, /Compliance Matrix/);
   assert.match(draft.markdown, /Technical Methodology/);

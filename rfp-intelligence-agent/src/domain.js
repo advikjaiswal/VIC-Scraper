@@ -111,6 +111,7 @@ function normalizeTender(input = {}) {
   const sourceId = cleanText(input.source_id || 'manual_import');
   const normalized = {
     id: input.id || null,
+    tracking_id: cleanText(input.tracking_id),
     source_id: sourceId,
     source_name: cleanText(input.source_name || sourceId),
     source_url: cleanText(input.source_url),

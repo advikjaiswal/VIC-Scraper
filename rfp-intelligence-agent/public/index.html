@@ -191,6 +191,18 @@
       font-size: 12px;
       font-weight: 650;
     }
+    .tracking-id {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid #bed4c4;
+      background: var(--green-soft);
+      color: var(--green);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 850;
+      margin-bottom: 8px;
+    }
     .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
     .row-actions button, .row-actions .button { padding: 8px 10px; min-height: 36px; }
     .action-item, .draft, .source {
@@ -517,6 +529,7 @@
     <aside class="sidebar">
       <h2 class="section-title">Today</h2>
       <div class="stats" id="stats"></div>
+      <div class="notice" id="feeSummary" style="display:none"></div>
       <h2 class="section-title" style="font-size:24px;margin-top:22px">Priority Queue</h2>
       <div id="actions"></div>
       <div class="sidebar-footer">Showing the five most urgent actions. Filter the pipeline by source, fit, deadline, or status for deeper review.</div>
@@ -633,15 +646,22 @@
         ['Shortlisted', stats.shortlisted_count || 0],
         ['Ready', stats.ready_count || 0],
         ['Submitted', stats.submitted_count || 0],
+        ['Won', stats.won_count || 0],
+        ['Success fee', `₹${Number(stats.success_fee_inr || 0).toLocaleString('en-IN')}`],
         ['Best score', stats.top_score || 0]
       ];
       $('#stats').innerHTML = items.map(([label, value]) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
+      const won = Number(stats.won_count || 0);
+      const fee = Number(stats.success_fee_inr || 0);
+      $('#feeSummary').style.display = won ? 'block' : 'none';
+      $('#feeSummary').textContent = won ? `${won} won opportunity tracked. Success fee due: ₹${fee.toLocaleString('en-IN')}.` : '';
     }
 
     function renderOpportunities(tenders) {
       $('#list').innerHTML = tenders.map(t => `
         <article class="opportunity" id="tender-${escapeAttr(t.id)}">
           <div>
+            <span class="tracking-id">${escapeHtml(t.tracking_id || 'Tracking pending')}</span>
             <h3>${escapeHtml(t.title)}</h3>
             <div class="meta">${escapeHtml(t.organization || 'Unknown organization')} · ${escapeHtml(t.source_name || 'Unknown source')} · Deadline ${escapeHtml(t.deadline || 'not detected')}</div>
             <p class="summary">${escapeHtml(shortText(t.ai_summary || t.description_clean || 'No summary available yet.', 260))}</p>
@@ -649,6 +669,7 @@
             <div class="row-actions">
               ${opportunityActions(t)}
               ${sourceButton(t)}
+              <button class="ghost" data-copy-title="${escapeAttr(t.tracking_id || t.id || '')}">Copy ID</button>
             </div>
           </div>
           <div class="score" title="Overall fit score">${t.overall_score || 0}</div>
@@ -666,6 +687,7 @@
         <div class="action-item">
           <div class="priority">${escapeHtml(priorityLabel(action.type))}</div>
           <strong>${escapeHtml(action.label || '')}</strong>
+          <div class="muted">${escapeHtml(tenderById.get(action.tender_id)?.tracking_id || '')}</div>
           <div class="muted">${action.due_at ? `Due ${escapeHtml(action.due_at)}` : 'No deadline detected'} · Priority ${escapeHtml(action.priority || 50)}</div>
           <div class="action-controls">
             <button class="ghost" data-focus="${escapeAttr(action.tender_id || '')}">Review RFP</button>
@@ -743,7 +765,7 @@
         return `<button data-status="submitted" data-id="${tender.id}">Mark Submitted</button>`;
       }
       if (status === 'submitted') {
-        return `<button data-status="won" data-id="${tender.id}">Won</button><button class="secondary" data-status="lost" data-id="${tender.id}">Lost</button>`;
+        return `<button data-status="won" data-id="${tender.id}">Mark Won + ₹2k</button><button class="secondary" data-status="lost" data-id="${tender.id}">Lost</button>`;
       }
       return '';
     }

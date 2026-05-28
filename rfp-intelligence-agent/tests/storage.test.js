@@ -30,12 +30,43 @@ test('stores, deduplicates, updates status, and records audit trail', () => {
   });
 
   assert.equal(first.id, second.id);
+  assert.match(first.tracking_id, /^VIC-RFP-2026-\d{4}$/);
+  assert.equal(second.tracking_id, first.tracking_id);
   assert.equal(store.listTenders({}).length, 1);
   assert.equal(store.listTenders({})[0].overall_score, 82);
 
   const updated = store.updateTenderStatus(first.id, 'shortlisted');
   assert.equal(updated.status, 'shortlisted');
   assert.equal(store.listAuditEvents().length, 1);
+});
+
+test('tracks won opportunities for success-fee billing', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rfp-store-fee-'));
+  const store = createStore(path.join(dir, 'test.sqlite'));
+  store.init();
+
+  const tender = store.upsertTender({
+    source_id: 'ngobox',
+    source_name: 'NGO Box',
+    title: 'Baseline Study RFP',
+    organization: 'Example NGO',
+    deadline: '2026-07-01',
+    duplicate_key: 'ngobox|baseline|example|2026',
+    overall_score: 80,
+    status: 'new'
+  });
+
+  store.updateTenderStatus(tender.id, 'shortlisted');
+  store.updateTenderStatus(tender.id, 'draft_required');
+  store.updateTenderStatus(tender.id, 'draft_generated');
+  store.updateTenderStatus(tender.id, 'under_review');
+  store.updateTenderStatus(tender.id, 'ready_to_submit');
+  store.updateTenderStatus(tender.id, 'submitted');
+  const won = store.updateTenderStatus(tender.id, 'won');
+
+  assert.equal(won.status, 'won');
+  assert.equal(store.stats().won_count, 1);
+  assert.equal(store.stats().success_fee_inr, 2000);
 });
 
 test('filters tenders by source and fit band', () => {

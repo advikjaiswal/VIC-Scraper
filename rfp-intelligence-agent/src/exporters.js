@@ -10,14 +10,19 @@ function rowsToCsv(rows, columns) {
 }
 
 function tendersToCsv(tenders) {
-  return rowsToCsv(tenders, [
-    'id',
+  const rows = tenders.map(tender => ({
+    ...tender,
+    success_fee_inr: tender.status === 'won' ? 2000 : 0
+  }));
+  return rowsToCsv(rows, [
+    'tracking_id',
     'title',
     'organization',
     'source_name',
     'country',
     'deadline',
     'status',
+    'success_fee_inr',
     'overall_score',
     'detail_url'
   ]);

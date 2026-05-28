@@ -20,16 +20,20 @@ function generateTemplateProposal({ tender, clientProfile = {} }) {
     : 'evaluation, research, fieldwork, analysis';
   const deadlineRisk = tender.deadline ? `Submission deadline is ${tender.deadline}.` : 'Submission deadline must be confirmed from the source document.';
   const confidence = description.length > 120 ? 68 : 52;
+  const trackingId = cleanText(tender.tracking_id || tender.id || 'VIC-RFP-[ASSIGN-ID]');
 
-  const markdown = `# Technical Proposal Draft: ${title}
+  const markdown = `# Technical Proposal Draft: ${trackingId} - ${title}
 
 ## Human Review Required
 
 This proposal pack is prepared for ${clientName}. It is a structured first draft and must be reviewed before submission. Do not submit until all placeholders, credentials, team details, financials, and compliance requirements are resolved.
 
+Tracking ID: **${trackingId}**
+
 ## RFP Summary
 
 - Issuer: ${organization}
+- Tracking ID: ${trackingId}
 - Deadline: ${deadline}
 - Detected focus: ${keywords}
 - Source scope signal: ${description}
@@ -186,7 +190,7 @@ Key interpretation:
 
 ## Cover Email
 
-Subject: Proposal submission for ${title}
+Subject: ${trackingId} - Proposal submission for ${title}
 
 Dear Procurement / Evaluation Committee,
 
@@ -208,12 +212,13 @@ ${clientName}
 - [ ] Submission email/portal checked
 - [ ] Source document and addenda reviewed
 - [ ] Eligibility confirmed
+- [ ] Tracking ID ${trackingId} included in internal tracker and file names
 - [ ] Final human approval received
 `;
 
   return {
     tender_id: tender.id,
-    title: `Proposal Draft - ${title}`,
+    title: `Proposal Draft - ${trackingId} - ${title}`,
     markdown,
     cover_email: markdown.split('## Cover Email')[1].split('## Submission Checklist')[0].trim(),
     checklist_markdown: markdown.split('## Submission Checklist')[1].trim(),
