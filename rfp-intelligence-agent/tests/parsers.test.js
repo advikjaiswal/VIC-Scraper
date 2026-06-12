@@ -4,7 +4,9 @@ const {
   parseDevNetJobsIndia,
   parseNgoBox,
   parseGizIndia,
-  parseGenericLinks
+  parseGenericLinks,
+  organizationFromUrl,
+  inferOrganization
 } = require('../src/parsers');
 
 test('parses DevNetJobsIndia-style RFP rows into tenders', () => {
@@ -69,6 +71,38 @@ test('parses NGO Box-style cards and keeps document links', () => {
   assert.equal(tenders[0].organization, 'CSR Foundation');
   assert.equal(tenders[0].posted_date, '2026-06-10');
   assert.equal(tenders[0].documents[0].url, 'https://ngobox.org/docs/tor.pdf');
+});
+
+test('infers NGO Box organizations from detail URLs when card text is sparse', () => {
+  assert.equal(
+    organizationFromUrl(
+      'https://ngobox.org/full_rfp_eoi_RFP-for-Baseline-assessment-for-effectiveness-of-Samasta-Application-Khushi-Baby-Association_19658',
+      'RFP for Baseline assessment for effectiveness of Samasta Application'
+    ),
+    'Khushi Baby Association'
+  );
+  assert.equal(
+    inferOrganization({
+      title: 'RFP for Landscape Assessment of Health Programs by contemporary organizations',
+      organization: 's JSW Foundation Add to Google Calendar',
+      detail_url: 'https://ngobox.org/full_rfp_eoi_RFP-for-Landscape-Assessment-of-Health-Programs-by-contemporary-organizations-JSW-Foundation_19680'
+    }),
+    'JSW Foundation'
+  );
+});
+
+test('NGO Box parser uses organization embedded in full listing URLs', () => {
+  const html = `
+    <a href="/full_rfp_eoi_RFP---Three-Year-Independent-Research-Study-%E2%80%93-Open-Books,-Open-minds,-a-gender-responsive-reading-program.-Pratham-Books_19690">
+      RFP - Three-Year Independent Research Study – Open Books, Open minds, a gender responsive reading program.
+    </a>`;
+  const tenders = parseNgoBox(html, {
+    id: 'ngobox',
+    name: 'NGO Box',
+    base_url: 'https://ngobox.org/rfp_eoi_listing.php'
+  });
+
+  assert.equal(tenders[0].organization, 'Pratham Books');
 });
 
 test('generic parser only returns evaluation-like links', () => {

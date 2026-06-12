@@ -43,7 +43,7 @@ test('scan runner saves successes and records source failures without crashing',
   assert.equal(store.listTenders({}).length, 1);
 });
 
-test('LinkedIn assisted source creates safe India social-impact review items', async () => {
+test('LinkedIn assisted source creates safe RFP-specific India review searches', async () => {
   const items = await scrapeLinkedInAssisted({
     id: 'linkedin-assisted',
     name: 'LinkedIn Assisted Search',
@@ -53,5 +53,8 @@ test('LinkedIn assisted source creates safe India social-impact review items', a
   assert.equal(items.length >= 3, true);
   assert.ok(items.every(item => item.country === 'India'));
   assert.ok(items.every(item => item.detail_url.startsWith('https://www.linkedin.com/search/results/content/')));
+  assert.ok(items.every(item => /RFP finder/i.test(item.title)));
+  assert.ok(items.every(item => /request%20for%20proposal|RFP|inviting%20proposals|proposal%20deadline/i.test(item.detail_url)));
+  assert.ok(items.every(item => /actual RFP\/proposal calls/i.test(item.description_clean)));
   assert.ok(items.some(item => /JSW/i.test(item.title + item.description_clean)));
 });

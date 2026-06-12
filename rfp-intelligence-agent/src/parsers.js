@@ -1,4 +1,4 @@
-const { normalizeTender, cleanText, parseDeadline } = require('./domain');
+const { normalizeTender, cleanText, parseDeadline, slug } = require('./domain');
 const { isUnsafeSourceUrl } = require('./sourceLinks');
 
 const RFP_TERMS = [
@@ -71,8 +71,60 @@ function blockAround(html, needle) {
 }
 
 function organizationFromText(text) {
-  const org = text.match(/(?:organization|organisation|client|agency)\s*:?\s*([A-Za-z0-9 &.,'()-]{3,90}?)(?=\s+(?:posted|published|publication date|date posted|issue date|released on|uploaded on|deadline|last date|closing date|due date|apply by)\b|$)/i);
-  return org ? cleanText(org[1]) : '';
+  const org = text.match(/(?:organization|organisation|client|agency|issued by|buyer|department)\s*:?\s*([A-Za-z0-9 &.,'()-]{3,110}?)(?=\s+(?:posted|published|publication date|date posted|issue date|released on|uploaded on|deadline|last date|closing date|due date|apply by|download|view|add to google calendar)\b|$)/i);
+  return org ? cleanOrganization(org[1]) : '';
+}
+
+function cleanOrganization(value) {
+  const cleaned = cleanText(value)
+    .replace(/\s*Add to Google Calendar\s*$/i, '')
+    .replace(/^s\s+(?=[A-Z])/i, '')
+    .replace(/^[-–:|]+|[-–:|]+$/g, '')
+    .trim();
+  if (!cleaned || /^unknown organization$/i.test(cleaned)) return '';
+  if (/^(rfp|eoi|tenders?|post a rfp|request for proposal)$/i.test(cleaned)) return '';
+  return cleaned;
+}
+
+function titleCaseFromSlug(value) {
+  const words = String(value || '').split('-').filter(Boolean);
+  return words.map(word => {
+    const upper = word.toUpperCase();
+    if (['AIF', 'CSR', 'HCL', 'JSW', 'NGO', 'UNDP', 'UNICEF', 'WASH'].includes(upper)) return upper;
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
+}
+
+function organizationFromUrl(url, title = '') {
+  if (!url) return '';
+  let lastSegment = '';
+  try {
+    lastSegment = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '');
+  } catch (_) {
+    return '';
+  }
+
+  const withoutId = lastSegment.replace(/_\d+$/i, '').replace(/^full_rfp_eoi_/i, '');
+  let normalized = slug(withoutId);
+  const titleSlug = slug(title);
+  if (!normalized) return '';
+
+  if (titleSlug && normalized.startsWith(titleSlug)) {
+    normalized = normalized.slice(titleSlug.length).replace(/^-+/, '');
+  }
+
+  if (!normalized || normalized === titleSlug) return '';
+
+  const candidate = titleCaseFromSlug(normalized);
+  return cleanOrganization(candidate);
+}
+
+function inferOrganization(input = {}) {
+  const current = cleanOrganization(input.organization);
+  if (current) return current;
+  return organizationFromText(`${input.description_raw || ''} ${input.description_clean || ''}`)
+    || organizationFromUrl(input.detail_url, input.title)
+    || organizationFromUrl(input.source_url, input.title);
 }
 
 function deadlineFromText(text) {
@@ -93,13 +145,19 @@ function documentsFromBlock(block, baseUrl) {
 
 function tenderFromLink(link, source, block = '') {
   const text = stripTags(block) || link.text;
+  const organization = inferOrganization({
+    title: link.text,
+    detail_url: link.url,
+    source_url: source.base_url,
+    description_raw: text
+  });
   return normalizeTender({
     source_id: source.id,
     source_name: source.name,
     source_url: source.base_url,
     detail_url: link.url,
     title: link.text,
-    organization: organizationFromText(text) || 'Unknown organization',
+    organization: organization || 'Unknown organization',
     country: source.region === 'India' ? 'India' : 'Unknown',
     region: source.region || '',
     opportunity_type: /eoi|expression/i.test(link.text) ? 'EOI' : 'RFP',
@@ -156,9 +214,10 @@ function parseNgoBox(html, source) {
   return parseGenericLinks(html, source).map(tender => {
     const block = blockAround(html, tender.detail_url.replace(/^https?:\/\/[^/]+/i, ''));
     const text = stripTags(block);
+    const organization = inferOrganization({ ...tender, description_raw: text });
     return {
       ...tender,
-      organization: organizationFromText(text) || tender.organization,
+      organization: organization || tender.organization,
       deadline: deadlineFromText(text) || tender.deadline,
       posted_date: postedDateFromText(text) || tender.posted_date,
       documents: documentsFromBlock(block, source.base_url)
@@ -195,6 +254,9 @@ module.exports = {
   stripTags,
   absoluteUrl,
   linkRecords,
+  cleanOrganization,
+  organizationFromUrl,
+  inferOrganization,
   postedDateFromText,
   parseGenericLinks,
   parseDevNetJobsIndia,

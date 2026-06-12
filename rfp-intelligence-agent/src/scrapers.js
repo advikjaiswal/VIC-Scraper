@@ -1,5 +1,6 @@
 const { fetchText, withRetry } = require('./http');
 const { parserFor } = require('./parsers');
+const { duplicateKey } = require('./domain');
 
 async function scrapePublicHtml(source, options = {}) {
   if (!source.base_url) return [];
@@ -24,26 +25,32 @@ async function scrapeSearchFallback(source) {
 }
 
 function linkedInSearchUrl(query) {
-  return `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(query)}`;
+  return `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(query)}&datePosted=%22past-week%22&sortBy=%22date_posted%22`;
 }
 
 async function scrapeLinkedInAssisted(source) {
   const today = new Date().toISOString().slice(0, 10);
   const searches = [
     {
-      query: 'India CSR social impact assessment RFP evaluation agency',
-      title: 'LinkedIn assisted review: India CSR social impact assessment posts',
-      description: 'Review recent LinkedIn company and CSR posts for social impact assessment, CSR evaluation, and evaluation agency opportunities in India.'
+      keyTitle: 'LinkedIn assisted review: India CSR social impact assessment posts',
+      query: '"request for proposal" OR RFP "social impact assessment" India CSR evaluation agency',
+      title: 'LinkedIn RFP finder: India CSR social impact assessment proposal calls',
+      organization: 'LinkedIn RFP search',
+      description: 'Review recent LinkedIn results that explicitly mention request for proposal, RFP, proposal calls, social impact assessment, CSR evaluation, and evaluation agency opportunities in India.'
     },
     {
-      query: 'JSW Foundation impact assessment RFP CSR evaluation',
-      title: 'LinkedIn assisted review: JSW social impact and CSR RFP posts',
-      description: 'Priority known-company search for JSW/JSW Foundation social impact, CSR evaluation, and proposal calls.'
+      keyTitle: 'LinkedIn assisted review: JSW social impact and CSR RFP posts',
+      query: '"inviting proposals" OR RFP "JSW Foundation" "impact assessment" CSR evaluation',
+      title: 'LinkedIn RFP finder: JSW Foundation impact assessment proposal calls',
+      organization: 'JSW Foundation LinkedIn search',
+      description: 'Priority known-company search for JSW/JSW Foundation posts that mention inviting proposals, RFPs, impact assessment, and CSR evaluation.'
     },
     {
-      query: 'India baseline endline evaluation consultancy CSR NGO',
-      title: 'LinkedIn assisted review: India baseline/endline evaluation consultancy posts',
-      description: 'Review recent LinkedIn posts for baseline, midline, endline, MEL, and evaluation consultancy opportunities in India.'
+      keyTitle: 'LinkedIn assisted review: India baseline/endline evaluation consultancy posts',
+      query: '"proposal deadline" OR "inviting proposals" baseline endline evaluation consultancy India NGO CSR',
+      title: 'LinkedIn RFP finder: India baseline/endline evaluation proposal calls',
+      organization: 'LinkedIn RFP search',
+      description: 'Review recent LinkedIn results that mention proposal deadlines or inviting proposals for baseline, endline, MEL, and evaluation consultancy opportunities in India.'
     }
   ];
   return searches.map(item => ({
@@ -52,12 +59,19 @@ async function scrapeLinkedInAssisted(source) {
     source_url: source.base_url,
     detail_url: linkedInSearchUrl(item.query),
     title: item.title,
-    organization: 'LinkedIn assisted search',
+    organization: item.organization,
     country: 'India',
     region: 'India',
+    opportunity_type: 'LinkedIn RFP search',
     posted_date: today,
     deadline: null,
-    description_clean: `${item.description} LinkedIn is handled as assisted review only; open the source search and manually import any relevant post or company opportunity.`,
+    duplicate_key: duplicateKey({
+      source_id: source.id,
+      title: item.keyTitle,
+      organization: 'LinkedIn assisted search',
+      deadline: null
+    }),
+    description_clean: `${item.description} LinkedIn is handled as assisted review only; open the filtered search, verify the original post, and import only actual RFP/proposal calls.`,
     documents: []
   }));
 }

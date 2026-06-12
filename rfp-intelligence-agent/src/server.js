@@ -12,6 +12,7 @@ const { normalizeTender } = require('./domain');
 const { tendersToCsv } = require('./exporters');
 const { generateTemplateProposal } = require('./proposals');
 const { slug } = require('./domain');
+const { inferOrganization } = require('./parsers');
 
 const publicDir = path.join(config.rootDir, 'public');
 const store = createStore(config.dbPath);
@@ -48,8 +49,10 @@ function refreshStoredIntelligence(now = new Date()) {
   let refreshed = 0;
 
   for (const tender of tenders) {
+    const organization = inferOrganization(tender) || tender.organization;
     store.upsertTender(scoreTender(normalizeTender({
       ...tender,
+      organization,
       ai_summary: '',
       ai_recommendation: '',
       next_action: ''
@@ -154,6 +157,7 @@ async function api(req, res, url) {
   }
 
   if (req.method === 'GET' && url.pathname === '/api/export/tenders.csv') {
+    refreshStoredIntelligence();
     send(res, 200, tendersToCsv(store.listTenders({ limit: 1000 })), {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': 'attachment; filename="rfp-tender-tracker.csv"'
