@@ -91,6 +91,26 @@ test('infers NGO Box organizations from detail URLs when card text is sparse', (
   );
 });
 
+test('does not infer organizations from generic listing page URLs', () => {
+  assert.equal(
+    inferOrganization({
+      title: 'RFP for State-Level Coverage Evaluation Survey',
+      organization: 'Unknown organization',
+      detail_url: 'https://www.devnetjobsindia.org/rfp_assignments.aspx',
+      source_url: 'https://www.devnetjobsindia.org/rfp_assignments.aspx'
+    }),
+    ''
+  );
+  assert.equal(
+    inferOrganization({
+      title: 'RFP for State-Level Coverage Evaluation Survey',
+      organization: 'Rfp Assignments Aspx',
+      detail_url: 'https://www.devnetjobsindia.org/rfp_assignments.aspx'
+    }),
+    ''
+  );
+});
+
 test('NGO Box parser uses organization embedded in full listing URLs', () => {
   const html = `
     <a href="/full_rfp_eoi_RFP---Three-Year-Independent-Research-Study-%E2%80%93-Open-Books,-Open-minds,-a-gender-responsive-reading-program.-Pratham-Books_19690">

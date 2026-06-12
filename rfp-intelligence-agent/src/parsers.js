@@ -82,7 +82,7 @@ function cleanOrganization(value) {
     .replace(/^[-–:|]+|[-–:|]+$/g, '')
     .trim();
   if (!cleaned || /^unknown organization$/i.test(cleaned)) return '';
-  if (/^(rfp|eoi|tenders?|post a rfp|request for proposal)$/i.test(cleaned)) return '';
+  if (/^(rfp|eoi|tenders?|post a rfp|request for proposal|rfp assignments aspx|rfp eoi listing php)$/i.test(cleaned)) return '';
   return cleaned;
 }
 
@@ -105,6 +105,7 @@ function organizationFromUrl(url, title = '') {
   }
 
   const withoutId = lastSegment.replace(/_\d+$/i, '').replace(/^full_rfp_eoi_/i, '');
+  if (/\.(aspx?|php|html?)$/i.test(withoutId)) return '';
   let normalized = slug(withoutId);
   const titleSlug = slug(title);
   if (!normalized) return '';
@@ -123,8 +124,7 @@ function inferOrganization(input = {}) {
   const current = cleanOrganization(input.organization);
   if (current) return current;
   return organizationFromText(`${input.description_raw || ''} ${input.description_clean || ''}`)
-    || organizationFromUrl(input.detail_url, input.title)
-    || organizationFromUrl(input.source_url, input.title);
+    || organizationFromUrl(input.detail_url, input.title);
 }
 
 function deadlineFromText(text) {
