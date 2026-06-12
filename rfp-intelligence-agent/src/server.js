@@ -75,7 +75,6 @@ async function api(req, res, url) {
   if (!requireAuth(req, res)) return;
 
   if (req.method === 'GET' && url.pathname === '/api/state') {
-    refreshStoredIntelligence();
     send(res, 200, {
       stats: store.stats(),
       tenders: store.listTenders({

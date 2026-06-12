@@ -531,7 +531,7 @@
       <div class="stats" id="stats"></div>
       <div class="notice" id="feeSummary" style="display:none"></div>
       <h2 class="section-title" style="font-size:24px;margin-top:22px">Priority Queue</h2>
-      <div id="actions"></div>
+      <div id="actions"><div class="empty">Loading priority queue...</div></div>
       <div class="sidebar-footer">Showing the five most urgent actions. Filter the pipeline by source, fit, deadline, or status for deeper review.</div>
     </aside>
 
@@ -580,19 +580,19 @@
           </select></label>
         </div>
         <div class="filter-strip" id="sourceChips"></div>
-        <div class="panel" id="list"></div>
+        <div class="panel" id="list"><div class="empty">Loading opportunities...</div></div>
       </div>
 
       <div id="view-drafts" hidden>
         <h2 class="section-title">Proposal Drafts</h2>
         <div class="notice">Drafts are generated with placeholders for credentials, team, budget and attachments. They are working documents, not final submissions.</div>
-        <div class="panel" id="drafts"></div>
+        <div class="panel" id="drafts"><div class="empty">Loading drafts...</div></div>
       </div>
 
       <div id="view-sources" hidden>
         <h2 class="section-title">Source Health</h2>
         <div class="notice">Subscription and login-gated sources are intentionally limited until legitimate credentials or approved access are provided.</div>
-        <div class="source-grid" id="sources"></div>
+        <div class="source-grid" id="sources"><div class="empty">Loading sources...</div></div>
       </div>
     </section>
   </main>
@@ -655,6 +655,25 @@
       const fee = Number(stats.success_fee_inr || 0);
       $('#feeSummary').style.display = won ? 'block' : 'none';
       $('#feeSummary').textContent = won ? `${won} won opportunity tracked. Success fee due: ₹${fee.toLocaleString('en-IN')}.` : '';
+    }
+
+    function renderLoading() {
+      $('#stats').innerHTML = [
+        ['Loading', '...'],
+        ['Sources', '...'],
+        ['Queue', '...'],
+        ['Best score', '...']
+      ].map(([label, value]) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
+      $('#actions').innerHTML = '<div class="empty">Loading priority queue...</div>';
+      $('#sourceChips').innerHTML = '';
+      $('#list').innerHTML = '<div class="empty">Loading opportunities...</div>';
+    }
+
+    function renderLoadError(error) {
+      const message = escapeHtml(error.message || 'Could not load dashboard data. Try Refresh or Scan Sources.');
+      $('#stats').innerHTML = '';
+      $('#actions').innerHTML = `<div class="empty">${message}</div>`;
+      $('#list').innerHTML = `<div class="empty">${message}</div>`;
     }
 
     function renderOpportunities(tenders) {
@@ -849,6 +868,7 @@
     }
 
     async function load() {
+      renderLoading();
       const params = new URLSearchParams();
       if ($('#q').value) params.set('q', $('#q').value);
       if ($('#status').value) params.set('status', $('#status').value);
@@ -940,7 +960,7 @@
         renderAccessPrompt(error.message);
         return;
       }
-      $('#list').innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+      renderLoadError(error);
     });
   </script>
 </body>
