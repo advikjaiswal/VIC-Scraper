@@ -73,14 +73,14 @@ const SOURCES = [
   },
   {
     id: 'linkedin-assisted',
-    name: 'LinkedIn Assisted Import',
+    name: 'LinkedIn Assisted Search',
     type: 'assisted_linkedin',
     base_url: 'https://www.linkedin.com/',
-    region: 'International',
-    categories: ['assisted import', 'company posts'],
-    enabled: false,
+    region: 'India',
+    categories: ['assisted search', 'company posts', 'social impact', 'csr'],
+    enabled: true,
     parser: 'manualImport',
-    notes: 'No risky login scraping. Use manual import or approved official access only.',
+    notes: 'Safe assisted workflow only. Opens public LinkedIn search/review links; no login scraping or bot behavior.',
     health_status: 'limited'
   }
 ];

@@ -55,6 +55,7 @@ test('parses NGO Box-style cards and keeps document links', () => {
     <div class="rfp">
       <a href="/rfp-detail/impact-evaluation">RFP - Endline Evaluation Study</a>
       <p>Organization: CSR Foundation</p>
+      <p>Published: 10 June 2026</p>
       <p>Deadline: 18/06/2026</p>
       <a href="/docs/tor.pdf">Download TOR</a>
     </div>`;
@@ -66,6 +67,7 @@ test('parses NGO Box-style cards and keeps document links', () => {
 
   assert.equal(tenders.length, 1);
   assert.equal(tenders[0].organization, 'CSR Foundation');
+  assert.equal(tenders[0].posted_date, '2026-06-10');
   assert.equal(tenders[0].documents[0].url, 'https://ngobox.org/docs/tor.pdf');
 });
 

@@ -5,6 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const { createStore } = require('../src/storage');
 const { runScan } = require('../src/scanner');
+const { scrapeLinkedInAssisted } = require('../src/scrapers');
 
 test('scan runner saves successes and records source failures without crashing', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rfp-scan-'));
@@ -40,4 +41,17 @@ test('scan runner saves successes and records source failures without crashing',
   assert.equal(run.saved, 1);
   assert.equal(run.errors.length, 1);
   assert.equal(store.listTenders({}).length, 1);
+});
+
+test('LinkedIn assisted source creates safe India social-impact review items', async () => {
+  const items = await scrapeLinkedInAssisted({
+    id: 'linkedin-assisted',
+    name: 'LinkedIn Assisted Search',
+    base_url: 'https://www.linkedin.com/'
+  });
+
+  assert.equal(items.length >= 3, true);
+  assert.ok(items.every(item => item.country === 'India'));
+  assert.ok(items.every(item => item.detail_url.startsWith('https://www.linkedin.com/search/results/content/')));
+  assert.ok(items.some(item => /JSW/i.test(item.title + item.description_clean)));
 });

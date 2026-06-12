@@ -299,7 +299,7 @@ function createStore(dbPath) {
       const q = `%${String(filters.q).replace(/[%_]/g, '')}%`;
       where.push(`(title LIKE ${sqlQuote(q)} OR organization LIKE ${sqlQuote(q)} OR description_clean LIKE ${sqlQuote(q)})`);
     }
-    const sql = `SELECT * FROM tenders ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY overall_score DESC, deadline ASC LIMIT ${Number(filters.limit || 200)}`;
+    const sql = `SELECT * FROM tenders ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY CASE WHEN posted_date IS NULL OR posted_date = '' THEN 1 ELSE 0 END ASC, posted_date DESC, overall_score DESC, deadline ASC LIMIT ${Number(filters.limit || 200)}`;
     return all(sql).map(mapTender);
   }
 

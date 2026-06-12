@@ -97,3 +97,30 @@ test('filters tenders by source and fit band', () => {
   assert.equal(store.listTenders({ fit: 'strong' })[0].title, 'Impact Evaluation RFP');
   assert.equal(store.listTenders({ fit: 'low' })[0].title, 'Vendor RFP');
 });
+
+test('lists latest published tenders before older tenders', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rfp-store-latest-'));
+  const store = createStore(path.join(dir, 'test.sqlite'));
+  store.init();
+
+  store.upsertTender({
+    source_id: 'ngobox',
+    title: 'Older Strong Social Impact RFP',
+    organization: 'Example NGO',
+    country: 'India',
+    posted_date: '2026-05-01',
+    duplicate_key: 'old|impact|example|2026',
+    overall_score: 95
+  });
+  store.upsertTender({
+    source_id: 'ngobox',
+    title: 'Latest Social Impact RFP',
+    organization: 'Example NGO',
+    country: 'India',
+    posted_date: '2026-06-11',
+    duplicate_key: 'latest|impact|example|2026',
+    overall_score: 72
+  });
+
+  assert.equal(store.listTenders({})[0].title, 'Latest Social Impact RFP');
+});

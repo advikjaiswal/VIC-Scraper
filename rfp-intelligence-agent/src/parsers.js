@@ -71,13 +71,18 @@ function blockAround(html, needle) {
 }
 
 function organizationFromText(text) {
-  const org = text.match(/(?:organization|organisation|client|agency)\s*:?\s*([A-Za-z0-9 &.,'()-]{3,90}?)(?=\s+(?:deadline|last date|closing date|due date|apply by)\b|$)/i);
+  const org = text.match(/(?:organization|organisation|client|agency)\s*:?\s*([A-Za-z0-9 &.,'()-]{3,90}?)(?=\s+(?:posted|published|publication date|date posted|issue date|released on|uploaded on|deadline|last date|closing date|due date|apply by)\b|$)/i);
   return org ? cleanText(org[1]) : '';
 }
 
 function deadlineFromText(text) {
   const explicit = text.match(/(?:deadline|last date|closing date|due date|apply by)\s*:?\s*([A-Za-z0-9 ,/-]{6,40})/i);
   return parseDeadline(explicit ? explicit[1] : text);
+}
+
+function postedDateFromText(text) {
+  const explicit = text.match(/(?:posted|published|publication date|date posted|issue date|released on|uploaded on)\s*:?\s*([A-Za-z0-9 ,/-]{6,40})/i);
+  return parseDeadline(explicit ? explicit[1] : '');
 }
 
 function documentsFromBlock(block, baseUrl) {
@@ -99,6 +104,7 @@ function tenderFromLink(link, source, block = '') {
     region: source.region || '',
     opportunity_type: /eoi|expression/i.test(link.text) ? 'EOI' : 'RFP',
     deadline: deadlineFromText(text),
+    posted_date: postedDateFromText(text),
     description_raw: text,
     documents: documentsFromBlock(block, source.base_url)
   });
@@ -138,6 +144,7 @@ function parseDevNetJobsIndia(html, source) {
       country: cells.find(cell => /^india$/i.test(cell)) || (source.region === 'India' ? 'India' : 'Unknown'),
       region: source.region || '',
       deadline: deadlineFromText(stripTags(row)),
+      posted_date: postedDateFromText(stripTags(row)),
       description_raw: stripTags(row),
       documents: documentsFromBlock(row, source.base_url)
     }));
@@ -153,6 +160,7 @@ function parseNgoBox(html, source) {
       ...tender,
       organization: organizationFromText(text) || tender.organization,
       deadline: deadlineFromText(text) || tender.deadline,
+      posted_date: postedDateFromText(text) || tender.posted_date,
       documents: documentsFromBlock(block, source.base_url)
     };
   });
@@ -187,6 +195,7 @@ module.exports = {
   stripTags,
   absoluteUrl,
   linkRecords,
+  postedDateFromText,
   parseGenericLinks,
   parseDevNetJobsIndia,
   parseNgoBox,

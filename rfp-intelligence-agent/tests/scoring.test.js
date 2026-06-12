@@ -78,3 +78,34 @@ test('baseline assessment and independent research study are strong proposal can
   assert.ok(baseline.overall_score >= 70);
   assert.ok(research.overall_score >= 60);
 });
+
+test('prioritizes Indian social-impact tenders from known companies over older global work', () => {
+  const now = new Date('2026-06-12T00:00:00Z');
+  const indianPriority = scoreTender({
+    title: 'JSW Foundation RFP for CSR Social Impact Assessment',
+    organization: 'JSW Foundation',
+    country: 'India',
+    posted_date: '2026-06-11',
+    deadline: '2026-06-30',
+    description_clean: 'CSR social impact assessment and impact evaluation for community development and livelihoods programs.',
+    documents: [{ url: 'https://example.org/tor.pdf' }],
+    source_id: 'ngobox'
+  }, { now });
+  const globalOlder = scoreTender({
+    title: 'Global independent research consultancy',
+    organization: 'International Buyer',
+    country: 'Kenya',
+    posted_date: '2026-04-15',
+    deadline: '2026-06-30',
+    description_clean: 'Independent research study for general advisory support.',
+    documents: [{ url: 'https://example.org/tor.pdf' }],
+    source_id: 'ungm'
+  }, { now });
+
+  assert.ok(indianPriority.overall_score > globalOlder.overall_score);
+  assert.ok(indianPriority.labels.includes('india_priority'));
+  assert.ok(indianPriority.labels.includes('social_impact'));
+  assert.ok(indianPriority.labels.includes('known_company'));
+  assert.ok(indianPriority.labels.includes('latest'));
+  assert.ok(indianPriority.keywords_matched.includes('jsw'));
+});

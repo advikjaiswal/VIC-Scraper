@@ -663,7 +663,7 @@
           <div>
             <span class="tracking-id">${escapeHtml(t.tracking_id || 'Tracking pending')}</span>
             <h3>${escapeHtml(t.title)}</h3>
-            <div class="meta">${escapeHtml(t.organization || 'Unknown organization')} · ${escapeHtml(t.source_name || 'Unknown source')} · Deadline ${escapeHtml(t.deadline || 'not detected')}</div>
+            <div class="meta">${escapeHtml(t.organization || 'Unknown organization')} · ${escapeHtml(t.source_name || 'Unknown source')} · Published ${escapeHtml(t.posted_date || 'not detected')} · Deadline ${escapeHtml(t.deadline || 'not detected')}</div>
             <p class="summary">${escapeHtml(shortText(t.ai_summary || t.description_clean || 'No summary available yet.', 260))}</p>
             <div class="recommendation">${escapeHtml(t.ai_recommendation || '')}</div>
             <div class="row-actions">
