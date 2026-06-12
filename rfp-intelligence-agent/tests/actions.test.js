@@ -35,3 +35,27 @@ test('builds practical actions for high-fit and missing-doc opportunities', () =
   assert.ok(actions.some(action => action.type === 'missing_document' && action.tender_id === 't2'));
   assert.ok(actions.every(action => action.tender_id !== 't3'));
 });
+
+test('does not put expired tenders in the priority queue', () => {
+  const actions = buildActions([
+    {
+      id: 'expired',
+      title: 'Expired Impact Evaluation RFP',
+      deadline: '2026-05-30',
+      status: 'new',
+      overall_score: 86,
+      document_availability_score: 88
+    },
+    {
+      id: 'current',
+      title: 'Current Social Impact RFP',
+      deadline: '2026-06-14',
+      status: 'new',
+      overall_score: 82,
+      document_availability_score: 88
+    }
+  ], { now: new Date('2026-06-12T00:00:00Z') });
+
+  assert.ok(actions.some(action => action.tender_id === 'current'));
+  assert.ok(actions.every(action => action.tender_id !== 'expired'));
+});

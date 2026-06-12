@@ -27,6 +27,8 @@ function buildActions(tenders, options = {}) {
     const days = daysUntil(tender.deadline, now);
     const docScore = Number(tender.document_availability_score ?? (Array.isArray(tender.documents) && tender.documents.length ? 88 : 35));
 
+    if (days !== null && days < 0) continue;
+
     if (score >= 70) {
       add(actions, tender, 'review_rfp', `Review high-fit RFP: ${tender.title}`, days !== null && days <= 14 ? 95 : 82);
       if (!['draft_generated', 'under_review', 'ready_to_submit'].includes(tender.status)) {

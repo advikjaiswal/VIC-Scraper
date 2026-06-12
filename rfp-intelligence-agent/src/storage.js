@@ -293,7 +293,7 @@ function createStore(dbPath) {
     if (filters.fit === 'strong') where.push('overall_score >= 70');
     if (filters.fit === 'maybe') where.push('overall_score >= 45 AND overall_score < 70');
     if (filters.fit === 'low') where.push('overall_score < 45');
-    if (filters.deadline === 'urgent') where.push(`deadline IS NOT NULL AND deadline <= date('now', '+7 day')`);
+    if (filters.deadline === 'urgent') where.push(`deadline IS NOT NULL AND deadline >= date('now') AND deadline <= date('now', '+7 day')`);
     if (filters.deadline === 'missing') where.push('(deadline IS NULL OR deadline = "")');
     if (filters.q) {
       const q = `%${String(filters.q).replace(/[%_]/g, '')}%`;

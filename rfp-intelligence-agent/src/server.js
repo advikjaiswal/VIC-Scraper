@@ -43,6 +43,24 @@ function requireAuth(req, res) {
   return false;
 }
 
+function refreshStoredIntelligence(now = new Date()) {
+  const tenders = store.listTenders({ limit: 5000 });
+  let refreshed = 0;
+
+  for (const tender of tenders) {
+    store.upsertTender(scoreTender(normalizeTender({
+      ...tender,
+      ai_summary: '',
+      ai_recommendation: '',
+      next_action: ''
+    }), { now }));
+    refreshed += 1;
+  }
+
+  const actions = store.replaceActions(buildActions(store.listTenders({ limit: 500 }), { now }));
+  return { refreshed, actions };
+}
+
 async function readJson(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -54,6 +72,7 @@ async function api(req, res, url) {
   if (!requireAuth(req, res)) return;
 
   if (req.method === 'GET' && url.pathname === '/api/state') {
+    refreshStoredIntelligence();
     send(res, 200, {
       stats: store.stats(),
       tenders: store.listTenders({
@@ -74,7 +93,7 @@ async function api(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/scan') {
     const run = await runScan({ store, sources: SOURCES });
-    const actions = store.replaceActions(buildActions(store.listTenders({ limit: 500 })));
+    const { actions } = refreshStoredIntelligence();
     send(res, 200, { run, actions, stats: store.stats() });
     return;
   }
@@ -82,7 +101,7 @@ async function api(req, res, url) {
   if (req.method === 'POST' && url.pathname === '/api/autopilot') {
     const body = await readJson(req);
     const run = body.scan === false ? null : await runScan({ store, sources: SOURCES });
-    const actions = store.replaceActions(buildActions(store.listTenders({ limit: 500 })));
+    const { actions } = refreshStoredIntelligence();
     send(res, 200, { run, actions, stats: store.stats() });
     return;
   }
