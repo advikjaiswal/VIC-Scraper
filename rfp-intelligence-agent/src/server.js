@@ -279,7 +279,10 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname.startsWith('/api/')) {
-    api(req, res, url).catch(error => send(res, 500, { error: error.message }));
+    api(req, res, url).catch(error => send(res, error.status || 500, {
+      error: error.message,
+      code: error.code || 'SERVER_ERROR'
+    }));
     return;
   }
   serveStatic(req, res, url);

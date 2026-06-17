@@ -25,5 +25,6 @@ module.exports = {
   smtpPort: Number(process.env.SMTP_PORT || 587),
   smtpSecure: boolEnv(process.env.SMTP_SECURE, false),
   smtpUser: process.env.SMTP_USER || '',
-  smtpPass: process.env.SMTP_PASS || ''
+  smtpPass: process.env.SMTP_PASS || '',
+  smtpTimeoutMs: Number(process.env.SMTP_TIMEOUT_MS || 15000)
 };

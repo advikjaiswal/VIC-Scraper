@@ -18,10 +18,14 @@ function missingEmailConfig(config) {
 }
 
 function createTransport(config) {
+  const timeout = Number(config.smtpTimeoutMs || 15000);
   return nodemailer.createTransport({
     host: config.smtpHost,
     port: config.smtpPort,
     secure: config.smtpSecure,
+    connectionTimeout: timeout,
+    greetingTimeout: timeout,
+    socketTimeout: timeout,
     auth: {
       user: config.smtpUser,
       pass: config.smtpPass
