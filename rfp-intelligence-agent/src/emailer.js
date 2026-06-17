@@ -22,6 +22,7 @@ function createTransport(config) {
   return nodemailer.createTransport({
     host: config.smtpHost,
     port: config.smtpPort,
+    family: 4,
     secure: config.smtpSecure,
     connectionTimeout: timeout,
     greetingTimeout: timeout,
