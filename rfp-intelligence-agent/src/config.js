@@ -21,6 +21,8 @@ module.exports = {
   emailScheduleCheckMinutes: Number(process.env.RFP_EMAIL_SCHEDULE_CHECK_MINUTES || 60),
   emailRecipients: process.env.RFP_EMAIL_RECIPIENTS || 'Vyshakh@vic.org.in,Vyshaak09@gmail.com',
   emailFrom: process.env.RFP_EMAIL_FROM || '',
+  emailWebhookUrl: process.env.RFP_EMAIL_WEBHOOK_URL || '',
+  emailWebhookSecret: process.env.RFP_EMAIL_WEBHOOK_SECRET || '',
   smtpHost: process.env.SMTP_HOST || '',
   smtpPort: Number(process.env.SMTP_PORT || 587),
   smtpSecure: boolEnv(process.env.SMTP_SECURE, false),

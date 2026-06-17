@@ -145,6 +145,7 @@ async function api(req, res, url) {
         ok: true,
         configured: missingEmailConfig(config).length === 0,
         missing: missingEmailConfig(config),
+        provider: config.emailWebhookUrl ? 'webhook' : 'smtp',
         recipients: config.emailRecipients,
         schedule_days: config.emailScheduleDays,
         last_sent_at: store.getSetting('last_email_leads_csv_sent_at') || null

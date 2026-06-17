@@ -10,11 +10,13 @@ function parseRecipients(value) {
 
 function missingEmailConfig(config) {
   const missing = [];
-  if (!config.smtpHost) missing.push('SMTP_HOST');
-  if (!config.smtpUser) missing.push('SMTP_USER');
-  if (!config.smtpPass) missing.push('SMTP_PASS');
   if (!config.emailFrom) missing.push('RFP_EMAIL_FROM');
   if (!parseRecipients(config.emailRecipients).length) missing.push('RFP_EMAIL_RECIPIENTS');
+  if (!config.emailWebhookUrl) {
+    if (!config.smtpHost) missing.push('SMTP_HOST');
+    if (!config.smtpUser) missing.push('SMTP_USER');
+    if (!config.smtpPass) missing.push('SMTP_PASS');
+  }
   return missing;
 }
 
@@ -47,6 +49,33 @@ function createTransport(config, options = {}) {
   });
 }
 
+async function sendViaWebhook({ config, payload }) {
+  const response = await fetch(config.emailWebhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      secret: config.emailWebhookSecret,
+      ...payload
+    }),
+    signal: AbortSignal.timeout(Number(config.smtpTimeoutMs || 15000))
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    const error = new Error(`Email webhook failed with ${response.status}: ${text.slice(0, 240)}`);
+    error.code = 'EMAIL_WEBHOOK_FAILED';
+    throw error;
+  }
+
+  return {
+    messageId: `webhook-${Date.now()}`,
+    provider: 'webhook',
+    response: text.slice(0, 240)
+  };
+}
+
 async function sendLeadsCsvEmail({ config, csv, stats, scanRun, now = new Date(), transport }) {
   const missing = missingEmailConfig(config);
   if (missing.length) {
@@ -61,9 +90,7 @@ async function sendLeadsCsvEmail({ config, csv, stats, scanRun, now = new Date()
   const found = scanRun ? `${scanRun.found || 0} found, ${scanRun.saved || 0} saved, ${scanRun.updated || 0} updated` : 'scan skipped';
   const errors = scanRun?.errors?.length ? `\n\nSource warnings:\n${scanRun.errors.map(error => `- ${error.source_name || error.source_id}: ${error.message}`).join('\n')}` : '';
 
-  const smtpHost = transport ? config.smtpHost : await resolveSmtpHost(config);
-  const mailer = transport || createTransport(config, { host: smtpHost });
-  const info = await mailer.sendMail({
+  const payload = {
     from: config.emailFrom,
     to: recipients,
     subject: `RFP tender tracker CSV - ${date}`,
@@ -84,10 +111,15 @@ async function sendLeadsCsvEmail({ config, csv, stats, scanRun, now = new Date()
       content: csv,
       contentType: 'text/csv; charset=utf-8'
     }]
-  });
+  };
+
+  const info = config.emailWebhookUrl && !transport
+    ? await sendViaWebhook({ config, payload })
+    : await (transport || createTransport(config, { host: await resolveSmtpHost(config) })).sendMail(payload);
 
   return {
     messageId: info.messageId || '',
+    provider: info.provider || 'smtp',
     recipients,
     filename
   };
@@ -98,5 +130,6 @@ module.exports = {
   missingEmailConfig,
   resolveSmtpHost,
   createTransport,
+  sendViaWebhook,
   sendLeadsCsvEmail
 };
