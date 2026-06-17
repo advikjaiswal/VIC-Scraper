@@ -1,3 +1,4 @@
+const dns = require('node:dns').promises;
 const nodemailer = require('nodemailer');
 
 function parseRecipients(value) {
@@ -17,16 +18,28 @@ function missingEmailConfig(config) {
   return missing;
 }
 
-function createTransport(config) {
+async function resolveSmtpHost(config) {
+  const host = config.smtpHost;
+  if (!host || /^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
+
+  const addresses = await dns.resolve4(host);
+  return addresses[0] || host;
+}
+
+function createTransport(config, options = {}) {
   const timeout = Number(config.smtpTimeoutMs || 15000);
+  const host = options.host || config.smtpHost;
   return nodemailer.createTransport({
-    host: config.smtpHost,
+    host,
     port: config.smtpPort,
     family: 4,
     secure: config.smtpSecure,
     connectionTimeout: timeout,
     greetingTimeout: timeout,
     socketTimeout: timeout,
+    tls: {
+      servername: config.smtpHost
+    },
     auth: {
       user: config.smtpUser,
       pass: config.smtpPass
@@ -48,7 +61,8 @@ async function sendLeadsCsvEmail({ config, csv, stats, scanRun, now = new Date()
   const found = scanRun ? `${scanRun.found || 0} found, ${scanRun.saved || 0} saved, ${scanRun.updated || 0} updated` : 'scan skipped';
   const errors = scanRun?.errors?.length ? `\n\nSource warnings:\n${scanRun.errors.map(error => `- ${error.source_name || error.source_id}: ${error.message}`).join('\n')}` : '';
 
-  const mailer = transport || createTransport(config);
+  const smtpHost = transport ? config.smtpHost : await resolveSmtpHost(config);
+  const mailer = transport || createTransport(config, { host: smtpHost });
   const info = await mailer.sendMail({
     from: config.emailFrom,
     to: recipients,
@@ -82,6 +96,7 @@ async function sendLeadsCsvEmail({ config, csv, stats, scanRun, now = new Date()
 module.exports = {
   parseRecipients,
   missingEmailConfig,
+  resolveSmtpHost,
   createTransport,
   sendLeadsCsvEmail
 };
