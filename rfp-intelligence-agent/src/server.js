@@ -13,6 +13,7 @@ const { tendersToCsv } = require('./exporters');
 const { generateTemplateProposal } = require('./proposals');
 const { slug } = require('./domain');
 const { inferOrganization } = require('./parsers');
+const { sendLeadsCsvEmail, missingEmailConfig } = require('./emailer');
 
 const publicDir = path.join(config.rootDir, 'public');
 const store = createStore(config.dbPath);
@@ -44,6 +45,21 @@ function requireAuth(req, res) {
   return false;
 }
 
+function cronAuthOk(req) {
+  if (authOk(req)) return true;
+  const header = req.headers.authorization || '';
+  const bearer = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const token = url.searchParams.get('cron_token') || url.searchParams.get('token') || '';
+  return bearer === config.cronToken || token === config.cronToken;
+}
+
+function requireCronAuth(req, res) {
+  if (cronAuthOk(req)) return true;
+  send(res, 401, { error: 'Protected email job. Provide RFP_CRON_TOKEN or RFP_ADMIN_TOKEN.' });
+  return false;
+}
+
 function refreshStoredIntelligence(now = new Date()) {
   const tenders = store.listTenders({ limit: 5000 });
   let refreshed = 0;
@@ -64,6 +80,52 @@ function refreshStoredIntelligence(now = new Date()) {
   return { refreshed, actions };
 }
 
+function daysSince(value, now = new Date()) {
+  if (!value) return Infinity;
+  const then = new Date(value);
+  if (Number.isNaN(then.getTime())) return Infinity;
+  return (now.getTime() - then.getTime()) / 86400000;
+}
+
+async function runEmailLeadsCsvJob(options = {}) {
+  const now = options.now || new Date();
+  const force = Boolean(options.force);
+  const scan = options.scan !== false;
+  const lastSentAt = store.getSetting('last_email_leads_csv_sent_at');
+  const elapsedDays = daysSince(lastSentAt, now);
+
+  if (!force && elapsedDays < config.emailScheduleDays) {
+    return {
+      skipped: true,
+      reason: `Last CSV email was sent ${elapsedDays.toFixed(2)} day(s) ago.`,
+      last_sent_at: lastSentAt
+    };
+  }
+
+  const missing = missingEmailConfig(config);
+  if (missing.length) {
+    const error = new Error(`Email pipeline is not configured. Missing: ${missing.join(', ')}`);
+    error.status = 503;
+    throw error;
+  }
+
+  const run = scan ? await runScan({ store, sources: SOURCES }) : null;
+  refreshStoredIntelligence(now);
+  const stats = store.stats();
+  const csv = tendersToCsv(store.listTenders({ limit: 1000 }));
+  const email = await sendLeadsCsvEmail({ config, csv, stats, scanRun: run, now });
+  const sentAt = now.toISOString();
+  store.setSetting('last_email_leads_csv_sent_at', sentAt);
+
+  return {
+    skipped: false,
+    sent_at: sentAt,
+    email,
+    stats,
+    run
+  };
+}
+
 async function readJson(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -72,6 +134,31 @@ async function readJson(req) {
 }
 
 async function api(req, res, url) {
+  if (url.pathname === '/api/jobs/email-leads-csv') {
+    if (!requireCronAuth(req, res)) return;
+    if (!['GET', 'POST'].includes(req.method)) {
+      send(res, 405, { error: 'Method not allowed' });
+      return;
+    }
+    if (url.searchParams.get('dry_run') === '1') {
+      send(res, 200, {
+        ok: true,
+        configured: missingEmailConfig(config).length === 0,
+        missing: missingEmailConfig(config),
+        recipients: config.emailRecipients,
+        schedule_days: config.emailScheduleDays,
+        last_sent_at: store.getSetting('last_email_leads_csv_sent_at') || null
+      });
+      return;
+    }
+    const result = await runEmailLeadsCsvJob({
+      force: url.searchParams.get('force') === '1',
+      scan: url.searchParams.get('scan') !== '0'
+    });
+    send(res, 200, result);
+    return;
+  }
+
   if (!requireAuth(req, res)) return;
 
   if (req.method === 'GET' && url.pathname === '/api/state') {
@@ -202,6 +289,18 @@ if (require.main === module) {
   server.listen(config.port, config.host, () => {
     console.log(`RFP Intelligence Agent listening on http://${config.host}:${config.port}`);
   });
+  if (config.emailPipelineEnabled) startEmailScheduler();
 }
 
-module.exports = { server, store };
+function startEmailScheduler() {
+  const intervalMs = Math.max(1, config.emailScheduleCheckMinutes) * 60000;
+  const tick = () => {
+    runEmailLeadsCsvJob({ force: false }).catch(error => {
+      console.error(`Email leads CSV job failed: ${error.message}`);
+    });
+  };
+  setTimeout(tick, 30000);
+  setInterval(tick, intervalMs);
+}
+
+module.exports = { server, store, runEmailLeadsCsvJob, startEmailScheduler };

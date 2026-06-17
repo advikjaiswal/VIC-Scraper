@@ -198,6 +198,19 @@ function createStore(dbPath) {
     }
   }
 
+  function getSetting(key) {
+    return get(`SELECT value FROM settings WHERE key = ${sqlQuote(key)}`)?.value || '';
+  }
+
+  function setSetting(key, value) {
+    run(`
+      INSERT INTO settings (key, value)
+      VALUES (${sqlQuote(key)}, ${sqlQuote(value)})
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+    `);
+    return getSetting(key);
+  }
+
   function upsertSource(source) {
     run(`
       INSERT INTO sources (id, name, type, base_url, region, categories, enabled, parser, notes, health_status)
@@ -433,6 +446,8 @@ function createStore(dbPath) {
     listActions,
     listSources,
     listAuditEvents,
+    getSetting,
+    setSetting,
     stats
   };
 }
